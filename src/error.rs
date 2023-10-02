@@ -1,10 +1,12 @@
 use failure::Fail;
-use pyo3::{exceptions::TypeError as PyTypeError, import_exception, PyErr, PyObject};
+use pyo3::{exceptions::PyTypeError, import_exception, PyErr, PyObject};
 
 #[derive(Debug, Fail)]
 pub enum HyperJsonError {
     #[fail(display = "Conversion error: {}", error)]
     InvalidConversion { error: serde_json::Error },
+    #[fail(display = "Conversion error: {}", error)]
+    InvalidConversion5 { error: json5::Error },
     #[fail(display = "Python Runtime exception: {}", error)]
     PyErr { error: String },
     #[fail(display = "Dictionary key is not a string: {:?}", obj)]

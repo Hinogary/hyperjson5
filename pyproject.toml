@@ -1,12 +1,12 @@
 [tool.poetry]
-name = "hyperjson"
-version = "0.2.4"
+name = "hyperjson5"
+version = "0.1.0"
 description = "A hyper-fast Python module for reading/writing JSON data"
-authors = ["Matthias Endler <matthias-endler@gmx.net>"]
+authors = ["Matthias Endler <matthias-endler@gmx.net>", "Martin Quarda <martin@quarda.cz>"]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/mre/hyperjson"
-keywords = ["json", "parser", "fast"]
+repository = "https://github.com/Hinogary/hyperjson5"
+keywords = ["json", "parser", "fast", "json5"]
 
 [tool.poetry.dependencies]
 python = "^3.5"

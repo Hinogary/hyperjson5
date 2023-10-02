@@ -5,8 +5,8 @@ use std::marker::PhantomData;
 mod error;
 use error::*;
 
-use pyo3::exceptions::TypeError as PyTypeError;
-use pyo3::exceptions::ValueError as PyValueError;
+use pyo3::exceptions::PyTypeError;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::{
     types::{PyAny, PyDict, PyFloat, PyList, PyTuple},
@@ -18,20 +18,12 @@ use serde::ser::{self, Serialize, SerializeMap, SerializeSeq, Serializer};
 
 #[pyfunction]
 pub fn load(py: Python, fp: PyObject, kwargs: Option<&PyDict>) -> PyResult<PyObject> {
-    // Temporary workaround for
-    // https://github.com/PyO3/pyo3/issues/145
-    let io: &PyAny = fp.extract(py)?;
-
-    // Alternative workaround
-    // fp.getattr(py, "seek")?;
-    // fp.getattr(py, "read")?;
-
     // Reset file pointer to beginning See
     // https://github.com/PyO3/pyo3/issues/143 Note that we ignore the return
     // value, because `seek` does not strictly need to exist on the object
-    let _success = io.call_method("seek", (0,), None);
+    let _success = fp.call_method(py, "seek", (0,), None);
 
-    let s_obj = io.call_method0("read")?;
+    let s_obj = fp.call_method0(py, "read")?;
     loads(
         py,
         s_obj.to_object(py),
@@ -134,7 +126,7 @@ pub fn dumps(
             .map_err(|error| HyperJsonError::InvalidConversion { error })?;
         String::from_utf8(ser.into_inner()).map_err(|error| HyperJsonError::Utf8Error { error })
     } else {
-        serde_json::to_string(&v).map_err(|error| HyperJsonError::InvalidConversion { error })
+        json5::to_string(&v).map_err(|error| HyperJsonError::InvalidConversion5 { error })
     };
 
     Ok(s?.to_object(py))
@@ -178,7 +170,7 @@ pub fn dump(
 
 /// A hyper-fast JSON encoder/decoder written in Rust
 #[pymodule]
-fn hyperjson(_py: Python, m: &PyModule) -> PyResult<()> {
+fn hyperjson5(_py: Python, m: &PyModule) -> PyResult<()> {
     // See https://github.com/PyO3/pyo3/issues/171
     // Use JSONDecodeError from stdlib until issue is resolved.
     // py_exception!(_hyperjson, JSONDecodeError);
@@ -207,57 +199,23 @@ pub fn loads_impl(
     let string_result: Result<String, _> = s.extract(py);
     match string_result {
         Ok(string) => {
-            let mut deserializer = serde_json::Deserializer::from_str(&string);
+            let mut deserializer = json5::Deserializer::from_str(&string).map_err(|e|PyTypeError::new_err(format!("{:?}", e)))?;
             let seed = HyperJsonValue::new(py, &parse_float, &parse_int);
             match seed.deserialize(&mut deserializer) {
                 Ok(py_object) => {
-                    deserializer
-                        .end()
-                        .map_err(|e| JSONDecodeError::py_err((e.to_string(), string.clone(), 0)))?;
                     Ok(py_object)
                 }
                 Err(e) => {
                     return convert_special_floats(py, &string, &parse_int).or_else(|err| {
-                        if e.is_syntax() {
-                            return Err(JSONDecodeError::py_err((
-                                format!("Value: {:?}, Error: {:?}", s, err),
-                                string.clone(),
-                                0,
-                            )));
-                        } else {
-                            return Err(PyValueError::py_err(format!(
-                                "Value: {:?}, Error: {:?}",
-                                s, e
-                            )));
-                        }
-                    });
+                        return Err(PyValueError::new_err(format!(
+                            "Value: {:?}, Error: {:?}",
+                            s, e
+                        )));
+                    })
                 }
             }
         }
-        _ => {
-            let bytes: Vec<u8> = s.extract(py).or_else(|e| {
-                Err(PyTypeError::py_err(format!(
-                    "the JSON object must be str, bytes or bytearray, got: {:?}",
-                    e
-                )))
-            })?;
-            let mut deserializer = serde_json::Deserializer::from_slice(&bytes);
-            let seed = HyperJsonValue::new(py, &parse_float, &parse_int);
-            match seed.deserialize(&mut deserializer) {
-                Ok(py_object) => {
-                    deserializer
-                        .end()
-                        .map_err(|e| JSONDecodeError::py_err((e.to_string(), bytes.clone(), 0)))?;
-                    Ok(py_object)
-                }
-                Err(e) => {
-                    return Err(PyTypeError::py_err(format!(
-                        "the JSON object must be str, bytes or bytearray, got: {:?}",
-                        e
-                    )));
-                }
-            }
-        }
+        _ => {Err(PyTypeError::new_err("Couldn't convert string"))}
     }
 }
 
@@ -313,7 +271,7 @@ impl<'p, 'a> Serialize for SerializePyObject<'p, 'a> {
                     } else if let Ok(key) = key.extract::<bool>() {
                         map.serialize_key(if key { "true" } else { "false" })?;
                     } else if let Ok(key) = key.str() {
-                        let key = key.to_string().map_err(debug_py_err)?;
+                        let key = key.to_string();
                         map.serialize_key(&key)?;
                     } else {
                         return Err(ser::Error::custom(format_args!(
@@ -372,7 +330,7 @@ impl<'p, 'a> Serialize for SerializePyObject<'p, 'a> {
             ))),
             Err(_) => Err(ser::Error::custom(format_args!(
                 "Type is not JSON serializable: {}",
-                self.obj.get_type().name().into_owned(),
+                self.obj.get_type().name().unwrap().to_string(),
             ))),
         }
     }
@@ -389,7 +347,7 @@ fn convert_special_floats(
         "NaN" => Ok(std::f64::NAN.to_object(py)),
         "Infinity" => Ok(std::f64::INFINITY.to_object(py)),
         "-Infinity" => Ok(std::f64::NEG_INFINITY.to_object(py)),
-        _ => Err(PyValueError::py_err(format!("Value: {:?}", s))),
+        _ => Err(PyValueError::new_err(format!("Value: {:?}", s))),
     }
 }
 
