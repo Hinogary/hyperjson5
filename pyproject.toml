@@ -7,21 +7,26 @@ license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/Hinogary/hyperjson5"
 keywords = ["json", "parser", "fast", "json5"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python",
+    "Programming Language :: Rust",
+]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [tool.poetry.dependencies]
-python = "^3.5"
-
-[tool.poetry.dev-dependencies]
-pytest = "^6.1"
-pylint = "^2.6"
-flake8 = "^3.9"
-wheel = "*"
-pytest-runner = "*"
-pytest-benchmark = "*"
-simplejson = "*"
-ujson = "*"
-orjson = { version = "*", markers = "python_version < '3.8'" }
-python-rapidjson = "*"
-hypothesis = "*"
-autopep8 = "*"
-maturin = "==0.9.4"
+python = "^3.8"

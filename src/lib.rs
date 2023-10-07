@@ -199,14 +199,14 @@ pub fn loads_impl(
     let string_result: Result<String, _> = s.extract(py);
     match string_result {
         Ok(string) => {
-            let mut deserializer = json5::Deserializer::from_str(&string).map_err(|e|PyTypeError::new_err(format!("{:?}", e)))?;
+            let mut deserializer = json5::Deserializer::from_str(&string).map_err(|e|PyValueError::new_err(format!("Error with parser: {:?}", e)))?;
             let seed = HyperJsonValue::new(py, &parse_float, &parse_int);
             match seed.deserialize(&mut deserializer) {
                 Ok(py_object) => {
                     Ok(py_object)
                 }
                 Err(e) => {
-                    return convert_special_floats(py, &string, &parse_int).or_else(|err| {
+                    return convert_special_floats(py, &string, &parse_int).or_else(|_| {
                         return Err(PyValueError::new_err(format!(
                             "Value: {:?}, Error: {:?}",
                             s, e
@@ -244,10 +244,6 @@ impl<'p, 'a> Serialize for SerializePyObject<'p, 'a> {
                     return val.serialize(serializer);
                 }
             };
-        }
-
-        fn debug_py_err<E: ser::Error>(err: PyErr) -> E {
-            E::custom(format_args!("{:?}", err))
         }
 
         cast!(|x: &PyDict| {

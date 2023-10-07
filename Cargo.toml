@@ -10,24 +10,6 @@ homepage = "https://github.com/Hinogary/hyperjson5"
 readme = "README.md"
 keywords = ["fast", "json", "python", "json5"]
 
-[package.metadata.maturin]
-classifier = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-    "License :: OSI Approved",
-    "Operating System :: MacOS",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python",
-    "Programming Language :: Rust",
-]
-
 [dependencies]
 json5 = "0.4.1"
 serde_json = "1.0.107"
